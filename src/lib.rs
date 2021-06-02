@@ -1,5 +1,6 @@
 extern crate num_cpus;
 
+use rayon::prelude::*;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
@@ -79,12 +80,18 @@ fn simplify_points(source_points: &Vec<(i32, i32)>, dest_points: &mut Vec<(i32, 
     }
 }
 
+fn apply_to_points_parallel(points: &Vec<(i32, i32)>, tolerance: f32) -> Vec<(i32, i32)> {
+    let mut dest_points: Vec<(i32, i32)> = Vec::new();
+
+    dest_points.push(points[0]);
+    simplify_points(points, &mut dest_points, tolerance, 0, (points.len() - 1).into());
+    dest_points.push(points[points.len() - 1]);
+
+    dest_points
+}
+
 #[pyfunction]
 fn apply_to_points(points: Vec<(i32, i32)>, tolerance: f32) -> Vec<(i32, i32)> {
-    if tolerance <= 0.0 {
-        return points;
-    }
-
     let mut dest_points: Vec<(i32, i32)> = Vec::new();
 
     dest_points.push(points[0]);
@@ -96,14 +103,9 @@ fn apply_to_points(points: Vec<(i32, i32)>, tolerance: f32) -> Vec<(i32, i32)> {
 
 #[pyfunction]
 fn apply_to_lines(lines: Vec<Vec<(i32, i32)>>, tolerance: f32) -> Vec<Vec<(i32, i32)>> {
-    let cores_number = num_cpus::get();
-
-    let mut valid_points: Vec<Vec<(i32, i32)>> = Vec::new();
-    for line in lines {
-        valid_points.push(apply_to_points(line, tolerance));
-    }
-
-     valid_points
+    lines.par_iter()
+        .map(|i| apply_to_points_parallel(i, tolerance))
+        .rev().collect()
 }
 
 #[pymodule]
