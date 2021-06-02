@@ -80,16 +80,6 @@ fn simplify_points(source_points: &Vec<(i32, i32)>, dest_points: &mut Vec<(i32, 
     }
 }
 
-fn apply_to_points_parallel(points: &Vec<(i32, i32)>, tolerance: f32) -> Vec<(i32, i32)> {
-    let mut dest_points: Vec<(i32, i32)> = Vec::new();
-
-    dest_points.push(points[0]);
-    simplify_points(points, &mut dest_points, tolerance, 0, (points.len() - 1).into());
-    dest_points.push(points[points.len() - 1]);
-
-    dest_points
-}
-
 #[pyfunction]
 fn apply_to_points(points: Vec<(i32, i32)>, tolerance: f32) -> Vec<(i32, i32)> {
     let mut dest_points: Vec<(i32, i32)> = Vec::new();
@@ -103,8 +93,8 @@ fn apply_to_points(points: Vec<(i32, i32)>, tolerance: f32) -> Vec<(i32, i32)> {
 
 #[pyfunction]
 fn apply_to_lines(lines: Vec<Vec<(i32, i32)>>, tolerance: f32) -> Vec<Vec<(i32, i32)>> {
-    lines.par_iter()
-        .map(|i| apply_to_points_parallel(i, tolerance))
+    lines.into_par_iter()
+        .map(|i| apply_to_points(i, tolerance))
         .rev().collect()
 }
 
