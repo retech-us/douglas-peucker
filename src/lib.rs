@@ -14,6 +14,9 @@ struct Line {
     point2: Point,
 }
 
+type TPoint = Vec<i32>;
+type TPoints = Vec<TPoint>;
+
 fn get_distance_between_line_and_point(point: Point, line: Line) -> f32 {
     let x = point.x;
     let y = point.y;
@@ -34,7 +37,7 @@ fn get_distance_between_line_and_point(point: Point, line: Line) -> f32 {
     0.0
 }
 
-fn simplify_points(source_points: &Vec<(i32, i32)>, dest_points: &mut Vec<(i32, i32)>, tolerance: f32, begin: usize, end: usize) {
+fn simplify_points(source_points: &TPoints, dest_points: &mut TPoints, tolerance: f32, begin: usize, end: usize) {
     if begin + 1 == end {
         return;
     }
@@ -44,23 +47,19 @@ fn simplify_points(source_points: &Vec<(i32, i32)>, dest_points: &mut Vec<(i32, 
 
     for i in begin + 1 .. end {
         let current_point = Point {
-            x: source_points[i].0,
-            y: source_points[i].1,
-        };
-
-        let start_point = Point {
-            x: source_points[begin].0,
-            y: source_points[begin].1,
-        };
-
-        let end_point = Point {
-            x: source_points[end].0,
-            y: source_points[end].1,
+            x: source_points[i][0],
+            y: source_points[i][1],
         };
 
         let line = Line {
-            point1: start_point,
-            point2: end_point,
+            point1: Point {
+                x: source_points[begin][0],
+                y: source_points[begin][1],
+            },
+            point2: Point {
+                x: source_points[end][0],
+                y: source_points[end][1],
+            },
         };
 
         let distance = get_distance_between_line_and_point(current_point, line);
@@ -74,25 +73,25 @@ fn simplify_points(source_points: &Vec<(i32, i32)>, dest_points: &mut Vec<(i32, 
     if max_distance > tolerance {
         simplify_points(source_points, dest_points, tolerance, begin, max_index);
 
-        dest_points.push(source_points[max_index]);
+        dest_points.push(source_points[max_index].to_vec());
 
         simplify_points(source_points, dest_points, tolerance, max_index, end)
     }
 }
 
 #[pyfunction]
-fn apply_to_points(points: Vec<(i32, i32)>, tolerance: f32) -> Vec<(i32, i32)> {
-    let mut dest_points: Vec<(i32, i32)> = Vec::new();
+fn apply_to_points(points: TPoints, tolerance: f32) -> TPoints {
+    let mut dest_points: TPoints = Vec::new();
 
-    dest_points.push(points[0]);
+    dest_points.push(points[0].to_vec());
     simplify_points(&points, &mut dest_points, tolerance, 0, (points.len() - 1).into());
-    dest_points.push(points[points.len() - 1]);
+    dest_points.push(points[points.len() - 1].to_vec());
 
     dest_points
 }
 
 #[pyfunction]
-fn apply_to_lines(lines: Vec<Vec<(i32, i32)>>, tolerance: f32) -> Vec<Vec<(i32, i32)>> {
+fn apply_to_lines(lines: Vec<TPoints>, tolerance: f32) -> Vec<TPoints> {
     lines.into_par_iter()
         .map(|i| apply_to_points(i, tolerance))
         .rev().collect()
